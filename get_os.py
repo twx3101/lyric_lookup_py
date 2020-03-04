@@ -1,6 +1,7 @@
 import platform
 from bs4 import BeautifulSoup
 import requests
+import re
 
 def main():
     current_platform = platform.system()
@@ -51,13 +52,45 @@ def get_url(artist, track):
     url = "https://genius.com/" + artist + '-' + track + '-lyrics'
     return url
 
-def get_lyrics(url):
+def get_data(url):
     r = requests.get(url)
+    soup = BeautifulSoup(r.text, "html.parser")
+    return soup
+
+def get_lyrics(url):
+   
     # with open ('outfile.txt', 'w', encoding='utf-16') as outfile:
     #     outfile.write(r.text)
-    soup = BeautifulSoup(r.text, "html.parser")
-    lyrics_data = soup.find('div', class_='lyrics')
-    return (lyrics_data.get_text())
+    soup = get_data(url)
+    translation = soup.find('h3', class_="annotation_label")
+
+    #If translation found
+    if translation and translation.text == "Song Translations":
+        a_string = soup.find(string=["English", "English Translation"])
+        b  = a_string.find_parents("a")
+        english_translate = (b[0].get("href"))
+        translate_soup = get_data(english_translate)
+        lyrics_data = translate_soup.find('div', class_='lyrics') 
+        return (lyrics_data.get_text())
+    else:
+        lyrics_data = soup.find('div', class_='lyrics')
+        return (lyrics_data.get_text())
+
+
+def test_translation():
+    with open('outfile.txt', 'r', encoding='utf-16' ) as infile:
+        a = infile.read()
+    
+    #find translation
+    soup = BeautifulSoup(a, 'html.parser')
+    translation = soup.find('h3', class_="annotation_label")
+
+    #If translation found
+    if translation and translation.text == "Song Translations":
+        a_string = soup.find("English")
+        b  = a_string.find_parents("a")
+        english_translate = (b[0].get("href"))
+        return(get_lyrics(english_translate))
 
 
 if __name__ == '__main__':
